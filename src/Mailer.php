@@ -130,8 +130,10 @@ class Mailer extends BaseMailer
         $this->_errors[] = $error;
     }
 
-    public function parseErrorCode($code)
+    public function parseErrorCode($response)
     {
+        $code = $response->statusCode();
+
         static $key = [
             200 => 'Your message is valid, but it is not queued to be delivered. (Sandbox)',
             202 => 'Your message is both valid, and queued to be delivered.',
@@ -146,7 +148,10 @@ class Mailer extends BaseMailer
             500 => 'An error occurred on a SendGrid server.',
             503 => 'The SendGrid v3 Web API is not available.',
         ];
-        return isset($key[$code]) ? $key[$code] : "$code: An unknown error was encountered!";
+
+        return isset($key[$code])
+            ? "{$key[$code]}\n {$response->body()}"
+            : "$code: An unknown error was encountered!\n {$response->body()}";
     }
 
     /**
@@ -167,7 +172,7 @@ class Mailer extends BaseMailer
             $this->addRawResponse($formatResponse);
 
             if ( ($response->statusCode() !== 202) && ($response->statusCode() !== 200) ) {
-                throw new \Exception( $this->parseErrorCode($response->statusCode()) );
+                throw new \Exception( $this->parseErrorCode($response) );
             }
 
             return true;
